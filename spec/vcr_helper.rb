@@ -3,71 +3,67 @@ require "vcr"
 VCR.configure do |config|
   config.cassette_library_dir = "spec/vcr_cassettes"
   config.hook_into :webmock
+  config.configure_rspec_metadata!
 end
 
-class VCRHelper
-  attr_reader :example, :cassette_name
-  def initialize(example)
-    @example = example
-    @cassette_name = build_cassette_name
+module BetterCassetteNames
+  def self.call(metadata)
+    metadata[:vcr] = {} if metadata[:vcr] == true
 
-    example.metadata[:vcr_cassette_path] = VCR.configuration.cassette_library_dir + "/" + cassette_name + ".yml"
+    metadata[:vcr][:cassette_name] = cassette_name(metadata)
   end
 
-  def run
-    VCR.use_cassette("fixtures") do
-      VCR.use_cassette(cassette_name, cassette_opts) do
-        example.metadata[:vcr_cassette_list] = VCR.cassettes.map(&:name)
-        example.run
-      end
+  def self.cassette_name(metadata)
+    basename = metadata[:file_path].sub("./spec/", "").chomp(".rb")
+    group_path = parent_group_descriptions(metadata).flatten
+
+    Pathname.new(basename).join(*group_path).to_s
+  end
+
+  def self.parent_group_descriptions(metadata)
+    # metadata[:example_group] is deprecated for example groups
+    parent_group = metadata.fetch(:example_group, metadata[:parent_example_group])
+
+    if parent_group
+      [parent_group_descriptions(parent_group), metadata[:description]]
+    else
+      [metadata[:description]]
     end
   end
 
-  private def build_cassette_name
-    basename = example.file_path.sub("./spec/", "").chomp(".rb")
-    group_path = example.example_group.parent_groups.reverse.map { |group| clean_filename(group.description) }.join("/")
-    filename = clean_filename(example.description)
-
-    Pathname.new(basename).join(group_path, filename).to_s
-  end
-
-  private def clean_filename(str)
-    str.downcase.gsub(/\s+/, "-").gsub(/["']/, "")
-  end
-
-  private def cassette_opts
-    {}
-  end
-
-  class CassettePathFormatter
+  class CassettePathReporter
     RSpec::Core::Formatters.register(self, :dump_failures)
 
     def initialize(output)
-      @failed_examples = []
       @output = output
+
+      cassette_library_path = VCR.configuration.cassette_library_dir.sub(File.expand_path("."), "")
+      @cassette_path_root = ".#{cassette_library_path}/"
     end
 
     def dump_failures(notification)
       @output.puts "\nUsing VCR cassettes:\n"
+      notification.failed_examples.select { |e| e.metadata.dig(:vcr, :cassette_name) }.each_with_index do |example, index|
+        cassette_name = example.metadata.dig(:vcr, :cassette_name)
+        cassette_path = @cassette_path_root + cassette_name + ".yml"
 
-      notification.failed_examples.select { |e| e.metadata[:use_vcr] }.each_with_index do |example, index|
         @output.puts "  #{index + 1}) #{example.full_description}:"
-        example.metadata[:vcr_cassette_list].each do |cassette_name|
-          cassette_path = "spec/vcr_cassettes/" + cassette_name + ".yml"
-          @output.puts "     #{cassette_path}"
-        end
+        @output.puts "     #{cassette_path}"
       end
     end
   end
 end
 
-
 RSpec.configure do |config|
-  config.before(:suite) do
-    config.add_formatter VCRHelper::CassettePathFormatter
-  end
+  # config.define_derived_metadata(:vcr) do |metadata|
+  #   BetterCassetteNames.call(metadata)
+  # end
 
-  config.around(:example, :use_vcr) do |example|
-    VCRHelper.new(example).run
+  # config.before(:suite) do
+  #   config.add_formatter BetterCassetteNames::CassettePathReporter
+  # end
+
+  config.prepend_before(:example, :vcr) do |example|
+    BetterCassetteNames.call(example.metadata)
   end
 end

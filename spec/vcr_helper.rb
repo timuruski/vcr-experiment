@@ -2,7 +2,7 @@ require "vcr"
 
 VCR.configure do |config|
   config.cassette_library_dir = "spec/vcr_cassettes"
-  config.default_cassette_options = { :persister_options => { :downcase_cassette_names => true } }
+  config.default_cassette_options = {persister_options: {downcase_cassette_names: true}}
 
   config.hook_into :webmock
 end
@@ -17,17 +17,25 @@ module VcrHelper
   end
 
   def self.around(example)
+    with_fixtures do
+      VCR.insert_cassette(cassette_name(example), cassette_opts(example))
+
+      example.run
+
+      VCR.eject_cassette(skip_no_unused_interactions_assertion: !!example.exception)
+    end
+  end
+
+  private_class_method def self.with_fixtures
     VCR.insert_cassette("fixtures", record: :none)
-    VCR.insert_cassette(cassette_name(example), cassette_opts(example))
 
-    example.run
-
-    VCR.eject_cassette(skip_no_unused_interactions_assertion: !!example.exception)
+    yield
+  ensure
     VCR.eject_cassette(skip_no_unused_interactions_assertion: true)
   end
 
   def self.cassette_name(example)
-    example.metadata.dig(:vcr, :cassette_name) || build_cassette_name(example.metadata)
+    example.metadata.dig(:vcr, :cassette_name) || build_cassette_name(example)
   end
 
   def self.cassette_opts(example)
@@ -37,22 +45,11 @@ module VcrHelper
     opts
   end
 
-  private_class_method def self.build_cassette_name(metadata)
-    basename = metadata[:file_path].sub("./spec/", "").chomp(".rb")
-    group_path = parent_group_descriptions(metadata).flatten
+  private_class_method def self.build_cassette_name(example)
+    basename = example.file_path.sub("./spec/", "").chomp(".rb")
+    group_path = example.example_group.parent_groups.map(&:description).reverse
 
-    Pathname.new(basename).join(*group_path).to_s
-  end
-
-  private_class_method def self.parent_group_descriptions(metadata)
-    # metadata[:example_group] is deprecated for example groups
-    parent_group = metadata.fetch(:example_group, metadata[:parent_example_group])
-
-    if parent_group
-      [parent_group_descriptions(parent_group), metadata[:description]]
-    else
-      [metadata[:description]]
-    end
+    Pathname.new(basename).join(*group_path, example.description).to_s
   end
 
   class CassettePathReporter

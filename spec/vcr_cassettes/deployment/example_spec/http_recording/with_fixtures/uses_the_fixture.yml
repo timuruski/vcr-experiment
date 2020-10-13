@@ -1,0 +1,43 @@
+---
+http_interactions:
+- request:
+    method: get
+    uri: https://httpbin.org/get?id=abc
+    body:
+      encoding: US-ASCII
+      string: ''
+    headers:
+      Accept-Encoding:
+      - gzip;q=1.0,deflate;q=0.6,identity;q=0.3
+      Accept:
+      - "*/*"
+      User-Agent:
+      - Ruby
+  response:
+    status:
+      code: 200
+      message: OK
+    headers:
+      Date:
+      - Tue, 13 Oct 2020 14:16:58 GMT
+      Content-Type:
+      - application/json
+      Content-Length:
+      - '340'
+      Connection:
+      - keep-alive
+      Server:
+      - gunicorn/19.9.0
+      Access-Control-Allow-Origin:
+      - "*"
+      Access-Control-Allow-Credentials:
+      - 'true'
+    body:
+      encoding: UTF-8
+      string: "{\n  \"args\": {\n    \"id\": \"abc\"\n  }, \n  \"headers\": {\n    \"Accept\":
+        \"*/*\", \n    \"Accept-Encoding\": \"gzip;q=1.0,deflate;q=0.6,identity;q=0.3\",
+        \n    \"Host\": \"httpbin.org\", \n    \"User-Agent\": \"Ruby\", \n    \"X-Amzn-Trace-Id\":
+        \"Root=1-5f85b6da-23db1f013e9a071c343db90b\"\n  }, \n  \"origin\": \"70.77.46.147\",
+        \n  \"url\": \"https://httpbin.org/get?id=abc\"\n}\n"
+  recorded_at: Tue, 13 Oct 2020 14:16:58 GMT
+recorded_with: VCR 6.0.0

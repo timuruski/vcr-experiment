@@ -9,15 +9,13 @@ end
 
 module VcrHelper
   def self.fixtures(example)
-    VCR.insert_cassette("fixtures", record: :all)
-
-    example.run
-
-    VCR.eject_cassette(skip_no_unused_interactions_assertion: !!example.exception)
+    with_fixtures(:all) do
+      example.run
+    end
   end
 
   def self.around(example)
-    with_fixtures do
+    with_fixtures(:none) do
       VCR.insert_cassette(cassette_name(example), cassette_opts(example))
 
       example.run
@@ -26,8 +24,8 @@ module VcrHelper
     end
   end
 
-  private_class_method def self.with_fixtures
-    VCR.insert_cassette("fixtures", record: :none)
+  private_class_method def self.with_fixtures(record_mode)
+    VCR.insert_cassette("fixtures", record: record_mode)
 
     yield
   ensure

@@ -12,22 +12,57 @@ module StripeManifest
   class Synchronizer
     def initialize(manifest_path)
       @manifest_path = manifest_path
-      @local_manifest = YAML.safe_load File.read(@manifest_path)
-      @stripe_manifest = {}
+      @local_manifest = YAML.load File.read(@manifest_path)
     end
 
+    # TODO Update Stripe object if manifest changes.
     def sync
-      # 1. Find or create products that are missing in Stripe and record ID to manifest
-      # 2. Record ID of products found in Stripe but
+      # Products
+      stripe_products = load_manifest(Stripe::Product)
       local_products = @local_manifest["products"] ||= {}
-      stripe_products = @stripe_manifest["products"] ||= {}
-      Stripe::Product.list.auto_paging_each do |object|
-        manifest_id = object.metadata["manifest_id"]
-        stripe_products[manifest_id] = object unless manifest_id.nil?
+      local_products.each do |manifest_id, attrs|
+        stripe_obj = stripe_products[manifest_id]
+
+        if stripe_obj.nil?
+          product_attrs = create_attrs(manifest_id, attrs)
+          stripe_obj = Stripe::Product.create(product_attrs)
+        end
+
+        warn "Replacing #{attrs["stripe_id"]}" if attrs["stripe_id"] != stripe_obj.id
+        attrs["stripe_id"] = stripe_obj.id
       end
 
-      p @manifest_path
-      p YAML.dump(@local_manifest)
+      # Prices
+      stripe_prices = load_manifest(Stripe::Price)
+      local_prices = @local_manifest["prices"] ||= {}
+      local_prices.each do |manifest_id, attrs|
+        stripe_obj = stripe_prices[manifest_id]
+
+        if stripe_obj.nil?
+          price_attrs = create_attrs(manifest_id, attrs)
+          price_attrs["product"] = local_products[attrs["product"]]["stripe_id"]
+          stripe_obj = Stripe::Price.create(price_attrs)
+        end
+
+        warn "Replacing #{attrs["stripe_id"]}" if attrs["stripe_id"] != stripe_obj.id
+        attrs["stripe_id"] = stripe_obj.id
+      end
+
+      File.write(@manifest_path, YAML.dump(@local_manifest))
+    end
+
+    private def load_manifest(stripe_object)
+      stripe_object.list.auto_paging_each.with_object({}) do |object, manifest|
+        if manifest_id = object.metadata["manifest_id"]
+          manifest[manifest_id] = object
+        end
+      end
+    end
+
+    private def create_attrs(manifest_id, attrs)
+      attrs.dup
+        .merge(metadata: {manifest_id: manifest_id})
+        .delete_if { |k,_| k == "stripe_id" }
     end
   end
 

@@ -1,15 +1,19 @@
 ---
 products:
   standard_widget:
-    name: "Standard Widget"
+    name: Standard Widget
+    stripe_id: prod_IGqBj2QLyig29B
   premium_widget:
-    name: "Premium Widget"
+    name: Premium Widget
+    stripe_id: prod_IGqBo7rQPbDfvb
 prices:
   standard_widget:
-    currency: "cad"
-    product: "standard_widget"
-    unit_amount: 5_00
+    currency: cad
+    product: standard_widget
+    unit_amount: 500
+    stripe_id: price_1HgIUx2cnc7yFQBahjud4CQK
   premium_widget:
-    currency: "cad"
-    product: "premium_widget"
-    unit_amount: 10_00
+    currency: cad
+    product: premium_widget
+    unit_amount: 1000
+    stripe_id: price_1HgIUx2cnc7yFQBaG8PvGn0S

@@ -6,17 +6,13 @@ GEM
     coderay (1.1.3)
     crack (0.4.4)
     diff-lcs (1.4.4)
+    dotenv (2.7.6)
     hashdiff (1.0.1)
     method_source (1.0.0)
-    mustermann (1.1.1)
-      ruby2_keywords (~> 0.0.1)
     pry (0.13.1)
       coderay (~> 1.1)
       method_source (~> 1.0)
     public_suffix (4.0.6)
-    rack (2.2.3)
-    rack-protection (2.1.0)
-      rack
     rspec (3.9.0)
       rspec-core (~> 3.9.0)
       rspec-expectations (~> 3.9.0)
@@ -30,13 +26,7 @@ GEM
       diff-lcs (>= 1.2.0, < 2.0)
       rspec-support (~> 3.9.0)
     rspec-support (3.9.3)
-    ruby2_keywords (0.0.2)
-    sinatra (2.1.0)
-      mustermann (~> 1.0)
-      rack (~> 2.2)
-      rack-protection (= 2.1.0)
-      tilt (~> 2.0)
-    tilt (2.0.10)
+    stripe (5.28.0)
     vcr (6.0.0)
     webmock (3.9.1)
       addressable (>= 2.3.6)
@@ -47,9 +37,10 @@ PLATFORMS
   ruby
 
 DEPENDENCIES
+  dotenv
   pry
   rspec
-  sinatra
+  stripe
   vcr
   webmock
 

@@ -1,0 +1,15 @@
+---
+products:
+  standard_widget:
+    name: "Standard Widget"
+  premium_widget:
+    name: "Premium Widget"
+prices:
+  standard_widget:
+    currency: "cad"
+    product: "standard_widget"
+    unit_amount: 5_00
+  premium_widget:
+    currency: "cad"
+    product: "premium_widget"
+    unit_amount: 10_00

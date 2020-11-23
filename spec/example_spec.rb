@@ -5,7 +5,7 @@ RSpec.describe "HTTP recording", :use_http do
     it "gets a successful response" do
       result = get("https://httpbin.org/get?id=123")
 
-      expect(result.code).to eq "400"
+      expect(result.code).to eq "200"
     end
 
     describe "when there is a group" do

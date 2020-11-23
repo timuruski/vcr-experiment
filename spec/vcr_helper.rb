@@ -20,10 +20,8 @@ module VcrHelper
   DEVELOPMENT = "development".freeze
   DEPLOY = "deploy".freeze
 
-  def self.around
-    deploy_mode? ?
-      method(:around_deloy) :
-      method(:example)
+  def self.around(example)
+    deploy_mode? ? around_deploy(example) : around_development(example)
   end
 
   def self.deploy_mode?
@@ -35,10 +33,10 @@ module VcrHelper
     deploy_cassette = cassette_name(example, prefix: DEPLOY)
     development_cassette = cassette_name(example, prefix: DEVELOPMENT)
 
-    with_cassette(fixtures_cassette, record: none) do
-      with_cassette(deploy_cassette, record: :none) do
-        with_cassette(development_cassette, cassette_opts(example, record: :once)) do
-          example.run; example
+    with_cassette(example, fixtures_cassette, record: :none) do
+      with_cassette(example, deploy_cassette, record: :none) do
+        with_cassette(example, development_cassette, cassette_opts(example, record: :once)) do
+          example.run
         end
       end
     end
@@ -48,7 +46,7 @@ module VcrHelper
     fixtures_cassette = "fixtures"
     deploy_cassette = cassette_name(example, prefix: DEPLOY)
 
-    with_cassette(example, fixtures_cassette, record: none) do
+    with_cassette(example, fixtures_cassette, record: :none) do
       with_cassette(example, deploy_cassette, record: :all) do
         example.run
       end
@@ -60,46 +58,47 @@ module VcrHelper
 
     yield
 
-    # TODO: 
+    # NOTE This was copied over from the built-in VCR adapter.
+    # It isn't necessary for the fixture cassettes, so it should be a parameter.
     VCR.eject_cassette(skip_no_unused_interactions_assertion: !!example.exception)
   end
 
-  def self.around_development(example)
-    # NOTE Fixture cassette is stored in the root.
-    example_cassette = cassette_name(example, prefix: DEPLOY)
-    example_cassette = Pathname.new(DEPLOY).join(example_cassette).to_s
-    VCR.insert_cassette(cassette_name(example, prefix: DEPLOY), cassette_opts(example, record: :none))
+  # def self.around_development(example)
+  #   # NOTE Fixture cassette is stored in the root.
+  #   example_cassette = cassette_name(example, prefix: DEPLOY)
+  #   example_cassette = Pathname.new(DEPLOY).join(example_cassette).to_s
+  #   VCR.insert_cassette(cassette_name(example, prefix: DEPLOY), cassette_opts(example, record: :none))
 
 
 
-    with_fixtures(:none, prefix: DEVELOPMENT) do
-      example_cassette = Pathname.new(DEVELOPMENT).join(cassette_name(example)).to_s
-      VCR.insert_cassette(example_cassette, cassette_opts(example))
+  #   with_fixtures(:none, prefix: DEVELOPMENT) do
+  #     example_cassette = Pathname.new(DEVELOPMENT).join(cassette_name(example)).to_s
+  #     VCR.insert_cassette(example_cassette, cassette_opts(example))
 
-      example.run
+  #     example.run
 
-      VCR.eject_cassette(skip_no_unused_interactions_assertion: !!example.exception)
-    end
-  end
+  #     VCR.eject_cassette(skip_no_unused_interactions_assertion: !!example.exception)
+  #   end
+  # end
 
-  def self.around_deploy(example)
-    with_fixtures(:none, prefix: DEVELOPMENT) do
-      example_cassette = Pathname.new(DEVELOPMENT).join(cassette_name(example)).to_s
-      VCR.insert_cassette(example_cassette, cassette_opts(example))
+  # def self.around_deploy(example)
+  #   with_fixtures(:none, prefix: DEVELOPMENT) do
+  #     example_cassette = Pathname.new(DEVELOPMENT).join(cassette_name(example)).to_s
+  #     VCR.insert_cassette(example_cassette, cassette_opts(example))
 
-      example.run
+  #     example.run
 
-      VCR.eject_cassette(skip_no_unused_interactions_assertion: !!example.exception)
-    end
-  end
+  #     VCR.eject_cassette(skip_no_unused_interactions_assertion: !!example.exception)
+  #   end
+  # end
 
-  def self.with_cassette(name, opts, skip_no_unused_interactions_assertion: true)
-    VCR.insert_cassette(name, opts)
+  # def self.with_cassette(name, opts, skip_no_unused_interactions_assertion: true)
+  #   VCR.insert_cassette(name, opts)
 
-    yield
+  #   yield
 
-    VCR.eject_cassette(skip_no_unused_interactions_assertion: skip_assert)
-  end
+  #   VCR.eject_cassette(skip_no_unused_interactions_assertion: skip_assert)
+  # end
 
   def self.refresh_fixtures(example)
     with_fixtures(:all) do
@@ -167,7 +166,9 @@ RSpec.configure do |config|
     config.add_formatter VcrHelper::CassettePathReporter
   end
 
-  config.around(:example, :use_vcr, &VcrHelper.around)
+  config.around(:example, :use_vcr) do |example|
+    VcrHelper.around(example)
+  end
 
   config.filter_run_excluding :vcr_fixtures
   config.around(:example, :vcr_fixtures) do |example|

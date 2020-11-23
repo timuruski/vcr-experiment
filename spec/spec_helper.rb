@@ -2,7 +2,7 @@ require "bundler/setup"
 require "pry"
 
 require "http_helper"
-require "stripe_helper"
+# require "stripe_helper"
 require "vcr_helper"
 
 RSpec.configure do |config|
